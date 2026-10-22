@@ -406,3 +406,5 @@ The backend is deployed on **Vercel**. Make sure to set all environment variable
 - Uses `nodemon` for auto-restart during development
 - MongoDB connection is handled via Mongoose
 
+#   B u g F i x C o u r s e M a s t e r - B a c k e n d  
+ 
