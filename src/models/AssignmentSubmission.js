@@ -10,12 +10,14 @@ const assignmentSubmissionSchema = new Schema(
     answer: { type: String, required: true },
 
     status: { type: String, enum: ["submitted", "reviewed"], default: "submitted" },
-    // optional review fields set by an admin
     reviewer: { type: Schema.Types.ObjectId, ref: "User" },
     reviewNotes: { type: String },
-    grade: { type: Number },
+    grade: { type: Number, min: 0 },
   },
   { timestamps: true }
 );
+
+// Compound index to prevent duplicate assignment submissions for the same lesson
+assignmentSubmissionSchema.index({ student: 1, course: 1, lessonId: 1 }, { unique: true });
 
 module.exports = model("AssignmentSubmission", assignmentSubmissionSchema);

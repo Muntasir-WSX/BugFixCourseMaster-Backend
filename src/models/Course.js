@@ -1,19 +1,17 @@
-// course model
-
 const { Schema, model } = require("mongoose");
 
 const lessonSchema = new Schema(
   {
     title: { type: String, required: true },
     videoUrl: { type: String, required: true },
-    liveClassLink: { type: String }, // Google Meet or Zoom link
-    liveClassDate: { type: Date }, // When the live class will be held
+    liveClassLink: { type: String },
+    liveClassDate: { type: Date },
     assignmentPrompt: { type: String },
     quiz: [
       {
-        question: String,
-        options: [String],
-        correctIndex: Number,
+        question: { type: String, required: true },
+        options: [{ type: String, required: true }],
+        correctIndex: { type: Number, required: true, min: 0 },
       },
     ],
   },
@@ -33,7 +31,7 @@ const courseSchema = new Schema(
     title: { type: String, required: true, index: true },
     description: { type: String, required: true },
     instructorName: { type: String, required: true, index: true },
-    price: { type: Number, required: true },
+    price: { type: Number, required: true, min: 0 },
     category: { type: String, index: true },
     tags: [{ type: String, index: true }],
     syllabus: [moduleSchema],

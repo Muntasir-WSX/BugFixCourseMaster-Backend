@@ -1,17 +1,29 @@
+// global error handling middleware
+
 const errorHandler = (err, req, res, next) => {
   console.error(err);
 
-  const status = err.statusCode || 500;
-  const message = err.message || "Server error";
+  let status = err.statusCode || 500;
+  let message = err.message || "Server error";
 
-  // Don't expose error details in production
+  // Handle Mongoose Invalid ObjectId CastError
+  if (err.name === "CastError") {
+    status = 400;
+    message = `Invalid format for field: ${err.path}`;
+  }
+
+  // Handle Mongoose Validation Error
+  if (err.name === "ValidationError") {
+    status = 400;
+    message = Object.values(err.errors).map((e) => e.message).join(", ");
+  }
+
   const response = {
     message: process.env.NODE_ENV === "production" && status === 500 
       ? "Internal server error" 
       : message,
   };
 
-  // Include stack trace in development
   if (process.env.NODE_ENV === "development") {
     response.stack = err.stack;
   }

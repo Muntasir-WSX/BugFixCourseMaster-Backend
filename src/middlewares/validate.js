@@ -1,13 +1,13 @@
-// middleware to validate request bodies against Zod schemas
+// middleware to validate request bodies against Zod schemas asynchronously
 
-const validate = (schema) => (req, res, next) => {
+const validate = (schema) => async (req, res, next) => {
   try {
-    req.body = schema.parse(req.body);
+    req.body = await schema.parseAsync(req.body);
     next();
   } catch (err) {
     return res.status(400).json({
       message: "Validation error",
-      errors: err.errors,
+      errors: err.errors || err.message,
     });
   }
 };

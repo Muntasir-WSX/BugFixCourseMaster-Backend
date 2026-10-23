@@ -1,32 +1,23 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-// importing auth routes
+
+// importing routes
 const authRoutes = require("./src/routes/auth.routes");
-// importing course routes
 const courseRoutes = require("./src/routes/course.routes");
-// importing admin routes
 const adminRoutes = require("./src/routes/admin.routes");
-// importing enrollment routes
 const enrollmentRoutes = require("./src/routes/enrollment.routes");
-// importing assignment routes
 const assignmentRoutes = require("./src/routes/assignment.routes");
-// importing quiz routes
 const quizRoutes = require("./src/routes/quiz.routes");
-// importing error handling middleware
-const errorHandler = require("./src/middlewares/errorMiddleware");
-// importing user model to ensure it's registered
 const userRoutes = require("./src/routes/user.routes");
 
+const errorHandler = require("./src/middlewares/errorMiddleware");
 const connectDB = require("./src/config/db");
 
 const app = express();
 
+// Standard CORS setup allowing all standard methods (GET, POST, PUT, DELETE, etc.)
 app.use(cors());
-// // Code-10 bug: custom header restricts allowed methods to GET and POST, breaking PUT/DELETE CORS preflights
-// app.use((req, res, next) => {
-// cors()
-// });
 app.use(express.json());
 
 // Middleware to ensure DB connection before handling requests
@@ -47,21 +38,14 @@ app.get("/", (req, res) => {
   res.send("Course Master Backend Running ✅");
 });
 
-// mounting auth routes
+// mounting routes
 app.use("/api/auth", authRoutes);
-// mounting course routes
 app.use("/api/courses", courseRoutes);
-// mounting admin routes
 app.use("/api/admin", adminRoutes);
-// mounting enrollment routes
 app.use("/api/enrollments", enrollmentRoutes);
-// mounting assignment routes
 app.use("/api/assignments", assignmentRoutes);
-// mounting quiz routes
 app.use("/api/quizzes", quizRoutes);
-// mounting user routes
 app.use("/api/users", userRoutes);
-
 
 // 404 handler (unknown routes)
 app.use((req, res) => {
