@@ -1,5 +1,3 @@
-// controller for admin-related operations
-
 const adminService = require("../services/admin.service");
 
 const createCourse = async (req, res) => {
@@ -14,6 +12,9 @@ const createCourse = async (req, res) => {
 const updateCourse = async (req, res) => {
   try {
     const course = await adminService.updateCourse(req.params.id, req.body);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
     res.json(course);
   } catch (err) {
     res.status(404).json({ message: err.message });
@@ -29,7 +30,6 @@ const deleteCourse = async (req, res) => {
   }
 };
 
-// ✅ NEW: enrollments list
 const getEnrollments = async (req, res) => {
   try {
     const data = await adminService.getEnrollments(req.query);
@@ -39,7 +39,6 @@ const getEnrollments = async (req, res) => {
   }
 };
 
-// ✅ NEW: assignments list
 const getAssignments = async (req, res) => {
   try {
     const data = await adminService.getAssignments();
@@ -49,7 +48,6 @@ const getAssignments = async (req, res) => {
   }
 };
 
-// review an assignment submission
 const reviewAssignment = async (req, res) => {
   try {
     const id = req.params.id;
@@ -60,13 +58,12 @@ const reviewAssignment = async (req, res) => {
   }
 };
 
-// get analytics data
 const getAnalytics = async (req, res) => {
   try {
     const data = await adminService.getAnalytics();
     res.json(data);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 

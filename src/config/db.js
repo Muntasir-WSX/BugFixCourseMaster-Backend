@@ -10,42 +10,57 @@ if (dns.setDefaultResultOrder) {
 
 // Cache the connection to reuse in serverless environments
 let cachedConnection = null;
+let connectionPromise = null;
 
 const connectDB = async () => {
-  // If already connected, return the cached connection
-  if (cachedConnection && mongoose.connection.readyState === 1) {
+  // Reuse any already-open connection, including one established by another
+  // startup path before the cache was populated.
+  if (mongoose.connection.readyState === 1) {
+    cachedConnection = cachedConnection || mongoose.connection;
     return cachedConnection;
   }
 
-  const uri = process.env.MONGODB_URI || process.env.MONGO_URI; // Support both
+  const configuredUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  const uri = buildMongoUri(configuredUri);
   if (!uri) throw new Error("MONGODB_URI or MONGO_URI missing in .env");
 
-  // If connection is in progress, wait for it
-  if (mongoose.connection.readyState === 2) {
-    await new Promise((resolve) => {
-      mongoose.connection.once("connected", resolve);
-      mongoose.connection.once("error", resolve);
-    });
-    if (mongoose.connection.readyState === 1) {
-      cachedConnection = mongoose.connection;
-      return cachedConnection;
-    }
+  if (connectionPromise) {
+    return connectionPromise;
   }
 
-  try {
-    // Connect with options optimized for serverless
-    const connection = await mongoose.connect(uri, {
+  connectionPromise = mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
       socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+    })
+    .then((connection) => {
+      cachedConnection = connection;
+      console.log("MongoDB Connected ✅");
+      return connection;
+    })
+    .catch((error) => {
+      console.error("MongoDB connection error:", error.message);
+      throw error;
+    })
+    .finally(() => {
+      connectionPromise = null;
     });
-    
-    cachedConnection = connection;
-    console.log("MongoDB Connected ✅");
-    return connection;
-  } catch (error) {
-    console.error("MongoDB connection error:", error.message);
-    throw error;
-  }
+
+  return connectionPromise;
 };
 
 module.exports = connectDB;
+
+function buildMongoUri(configuredUri) {
+  if (!configuredUri) return configuredUri;
+
+  const username = process.env.MONGODB_USER;
+  const password = process.env.MONGODB_PASSWORD;
+  if (!username || !password) return configuredUri;
+
+  const match = configuredUri.match(/^(mongodb(?:\+srv)?:\/\/)(?:[^@]+@)?(.+)$/);
+  if (!match) {
+    throw new Error("MONGODB_URI has an invalid MongoDB connection string format");
+  }
+
+  return `${match[1]}${encodeURIComponent(username)}:${encodeURIComponent(password)}@${match[2]}`;
+}

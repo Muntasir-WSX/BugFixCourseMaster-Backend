@@ -18,7 +18,7 @@ const myEnrollments = async (req, res) => {
     const data = await enrollmentService.getMyEnrollments(req.user.id);
     res.json(data);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 

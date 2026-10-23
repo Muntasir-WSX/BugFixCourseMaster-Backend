@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const mongoose = require("mongoose");
 // importing auth routes
 const authRoutes = require("./src/routes/auth.routes");
 // importing course routes
@@ -19,26 +20,21 @@ const userRoutes = require("./src/routes/user.routes");
 
 const connectDB = require("./src/config/db");
 
-// Connect to database (non-blocking for serverless)
-connectDB().catch((err) => {
-  console.error("Initial DB connection failed:", err.message);
-  // Don't throw - let individual requests handle connection
-});
-
 const app = express();
 
 app.use(cors());
-// Code-10 bug: custom header restricts allowed methods to GET and POST, breaking PUT/DELETE CORS preflights
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Methods", "GET, POST");
-  next();
-});
+// // Code-10 bug: custom header restricts allowed methods to GET and POST, breaking PUT/DELETE CORS preflights
+// app.use((req, res, next) => {
+// cors()
+// });
 app.use(express.json());
 
 // Middleware to ensure DB connection before handling requests
 app.use(async (req, res, next) => {
   try {
-    await connectDB();
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
     next();
   } catch (err) {
     console.error("Database connection middleware error:", err.message);

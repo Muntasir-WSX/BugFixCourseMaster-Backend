@@ -1,5 +1,3 @@
-// controller for authentication routes
-
 const authService = require("../services/auth.service");
 
 const register = async (req, res) => {
@@ -23,6 +21,9 @@ const login = async (req, res) => {
 const me = async (req, res) => {
   try {
     const user = await authService.getMe(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User profile not found" });
+    }
     res.json(user);
   } catch (err) {
     res.status(404).json({ message: err.message });
@@ -30,4 +31,3 @@ const me = async (req, res) => {
 };
 
 module.exports = { register, login, me };
-

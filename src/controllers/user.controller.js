@@ -5,18 +5,20 @@ const getAllUsers = async (req, res) => {
     const users = await userService.getAllUsers();
     res.json(users);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    // Prevent deleting yourself
     if (id === req.user.id) {
       return res.status(400).json({ message: "Cannot delete your own account" });
     }
     const result = await userService.deleteUser(id);
+    if (!result) {
+      return res.status(404).json({ message: "User not found" });
+    }
     res.json(result);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -27,11 +29,13 @@ const updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    // Prevent changing your own role
     if (id === req.user.id) {
       return res.status(400).json({ message: "Cannot change your own role" });
     }
     const user = await userService.updateUserRole(id, role);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
     res.json(user);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -41,11 +45,13 @@ const updateUserRole = async (req, res) => {
 const toggleBanUser = async (req, res) => {
   try {
     const { id } = req.params;
-    // Prevent banning yourself
     if (id === req.user.id) {
       return res.status(400).json({ message: "Cannot ban your own account" });
     }
     const user = await userService.toggleBanUser(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
     res.json(user);
   } catch (err) {
     res.status(400).json({ message: err.message });
