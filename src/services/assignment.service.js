@@ -4,9 +4,18 @@ const Enrollment = require("../models/Enrollment");
 const submitAssignment = async (studentId, payload) => {
   const { courseId, lessonId, answerType, answer } = payload;
 
-  // ensure student enrolled
   const enrolled = await Enrollment.findOne({ student: studentId, course: courseId });
   if (!enrolled) throw new Error("You are not enrolled in this course");
+
+  // Duplicate Submission Check
+  const existingSubmission = await AssignmentSubmission.findOne({
+    student: studentId,
+    course: courseId,
+    lessonId,
+  });
+  if (existingSubmission) {
+    throw new Error("Assignment already submitted for this lesson");
+  }
 
   const submission = await AssignmentSubmission.create({
     student: studentId,
@@ -29,7 +38,6 @@ const getMySubmissions = async (studentId, courseId = null) => {
     .sort({ createdAt: -1 });
 };
 
-// Get assignment statistics for a course
 const getAssignmentStats = async (studentId, courseId) => {
   const submissions = await AssignmentSubmission.find({
     student: studentId,
@@ -47,7 +55,6 @@ const getAssignmentStats = async (studentId, courseId) => {
     };
   }
 
-  // Calculate average from graded assignments only
   const gradedSubmissions = submissions.filter((s) => s.grade !== null && s.grade !== undefined);
   const average = gradedSubmissions.length > 0
     ? Math.round(gradedSubmissions.reduce((sum, s) => sum + s.grade, 0) / gradedSubmissions.length)

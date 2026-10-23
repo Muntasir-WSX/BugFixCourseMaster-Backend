@@ -22,7 +22,6 @@ const deleteCourse = async (id) => {
   return { message: "Course deleted" };
 };
 
-// ✅ NEW: get enrollments (with optional filters)
 const getEnrollments = async (query) => {
   const { courseId, batchId } = query;
 
@@ -36,10 +35,10 @@ const getEnrollments = async (query) => {
     .sort({ createdAt: -1 });
 };
 
-// ✅ NEW: get all assignment submissions (Code-8 bug: queries by courseId instead of course)
+// Fixed Code-8 Bug: Corrected schema key from courseId to course
 const getAssignments = async (query = {}) => {
   const filter = {};
-  if (query.courseId) filter.courseId = query.courseId; // Mongoose schema has 'course', not 'courseId'
+  if (query.courseId) filter.course = query.courseId;
 
   const submissions = await AssignmentSubmission.find(filter)
     .populate("student", "name email")
@@ -47,7 +46,6 @@ const getAssignments = async (query = {}) => {
     .populate("reviewer", "name")
     .sort({ createdAt: -1 });
 
-  // Add lesson title to each submission
   const submissionsWithLessonTitle = submissions.map((sub) => {
     const submissionObj = sub.toObject();
     let lessonTitle = "Unknown Lesson";
@@ -72,7 +70,6 @@ const getAssignments = async (query = {}) => {
   return submissionsWithLessonTitle;
 };
 
-// review/update an assignment submission (admin)
 const reviewAssignment = async (id, payload, adminId) => {
   const { reviewNotes, grade, status } = payload;
 
@@ -92,9 +89,7 @@ const reviewAssignment = async (id, payload, adminId) => {
   return submission;
 };
 
-// Get analytics data for dashboard
 const getAnalytics = async () => {
-  // Get enrollments grouped by date (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -103,14 +98,12 @@ const getAnalytics = async () => {
     createdAt: { $gte: thirtyDaysAgo }
   }).sort({ createdAt: 1 });
 
-  // Group by date
   const enrollmentData = {};
   enrollments.forEach(enrollment => {
     const date = enrollment.createdAt.toISOString().split('T')[0];
     enrollmentData[date] = (enrollmentData[date] || 0) + 1;
   });
 
-  // Convert to array format for chart (last 30 days)
   const chartData = [];
   for (let i = 29; i >= 0; i--) {
     const date = new Date();
@@ -118,7 +111,6 @@ const getAnalytics = async () => {
     date.setHours(0, 0, 0, 0);
     const dateStr = date.toISOString().split('T')[0];
 
-    // Format date for display (e.g., "Jan 15")
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const displayDate = `${monthNames[date.getMonth()]} ${date.getDate()}`;
 
@@ -129,26 +121,15 @@ const getAnalytics = async () => {
     });
   }
 
-  // Get total stats
   const totalEnrollments = await Enrollment.countDocuments();
   const totalCourses = await Course.countDocuments();
   const totalStudents = await User.countDocuments({ role: "student" });
-  const totalInstructors = await User.countDocuments({ role: "admin" }); // Assuming admins are instructors
+  const totalInstructors = await User.countDocuments({ role: "admin" });
 
-  // Get enrollments by course (top 5)
   const enrollmentsByCourse = await Enrollment.aggregate([
-    {
-      $group: {
-        _id: "$course",
-        count: { $sum: 1 }
-      }
-    },
-    {
-      $sort: { count: -1 }
-    },
-    {
-      $limit: 5
-    },
+    { $group: { _id: "$course", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 5 },
     {
       $lookup: {
         from: "courses",
@@ -157,9 +138,7 @@ const getAnalytics = async () => {
         as: "courseInfo"
       }
     },
-    {
-      $unwind: "$courseInfo"
-    },
+    { $unwind: "$courseInfo" },
     {
       $project: {
         courseName: "$courseInfo.title",

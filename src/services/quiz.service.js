@@ -4,7 +4,6 @@ const QuizSubmission = require("../models/QuizSubmission");
 
 const submitQuiz = async (studentId, payload) => {
   const { courseId, lessonId, answers } = payload;
-  // answers = [selectedIndex, selectedIndex, ...]
 
   const enrolled = await Enrollment.findOne({ student: studentId, course: courseId });
   if (!enrolled) throw new Error("You are not enrolled in this course");
@@ -12,7 +11,6 @@ const submitQuiz = async (studentId, payload) => {
   const course = await Course.findById(courseId);
   if (!course) throw new Error("Course not found");
 
-  // find lesson quiz
   let quiz = null;
   for (const mod of course.syllabus) {
     const lesson = mod.lessons.id(lessonId);
@@ -30,21 +28,9 @@ const submitQuiz = async (studentId, payload) => {
   });
 
   const total = quiz.length;
-  // Code-4 bug: multiplied by 10 instead of 100
-  const percent = Math.round((score / total) * 10);
+  // Fixed Code-4 bug: multiplied by 100 for correct percentage
+  const percent = Math.round((score / total) * 100);
 
-  // Check if student already submitted this quiz (optional - allow retakes)
-  // If you want to prevent duplicates, uncomment the following:
-  // const existing = await QuizSubmission.findOne({
-  //   student: studentId,
-  //   course: courseId,
-  //   lessonId,
-  // });
-  // if (existing) {
-  //   throw new Error("You have already submitted this quiz");
-  // }
-
-  // Save quiz submission to database
   const submission = await QuizSubmission.create({
     student: studentId,
     course: courseId,
@@ -55,7 +41,6 @@ const submitQuiz = async (studentId, payload) => {
     percent,
   });
 
-  // Verify it was saved
   if (!submission || !submission._id) {
     throw new Error("Failed to save quiz submission");
   }
@@ -69,7 +54,6 @@ const submitQuiz = async (studentId, payload) => {
   };
 };
 
-// Get quiz submissions for a student in a specific course
 const getMyQuizSubmissions = async (studentId, courseId = null) => {
   const filter = { student: studentId };
   if (courseId) filter.course = courseId;
@@ -79,12 +63,11 @@ const getMyQuizSubmissions = async (studentId, courseId = null) => {
     .sort({ createdAt: -1 });
 };
 
-// Get quiz statistics for a course
 const getQuizStats = async (studentId, courseId) => {
   const submissions = await QuizSubmission.find({
     student: studentId,
     course: courseId,
-  }).sort({ createdAt: -1 }); // Get most recent first
+  }).sort({ createdAt: -1 });
 
   if (submissions.length === 0) {
     return {
@@ -94,7 +77,6 @@ const getQuizStats = async (studentId, courseId) => {
     };
   }
 
-  // Group by lessonId and get only the most recent submission per lesson
   const latestSubmissions = {};
   submissions.forEach((sub) => {
     const lessonIdStr = String(sub.lessonId);
