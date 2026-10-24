@@ -1,70 +1,56 @@
-// service to handle course-related operations
-
 const Course = require("../models/Course");
 
-// Helper to escape regex special characters safely
-const escapeRegex = (text) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+const getCourses = async (queryParams) => {
+  const page = parseInt(queryParams.page) || 1;
+  const limit = parseInt(queryParams.limit) || 8;
+  const search = queryParams.search;
+  const sort = queryParams.sort;
+  const category = queryParams.category;
+  const tags = queryParams.tags;
 
-const getCourses = async (query) => {
-  const {
-    page = 1,
-    limit = 8,
-    search = "",
-    sort = "",
-    category,
-    tags,
-  } = query;
+  let query = {};
 
-  const pageNum = Math.max(1, parseInt(page, 10) || 1);
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 8));
-
-  const filter = {};
-
-  if (search && typeof search === "string") {
-    const sanitizedSearch = escapeRegex(search.trim());
-    filter.$or = [
-      { title: { $regex: sanitizedSearch, $options: "i" } },
-      { instructorName: { $regex: sanitizedSearch, $options: "i" } },
+  // Search by title or instructor
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { instructorName: { $regex: search, $options: "i" } },
     ];
   }
 
-  if (category && typeof category === "string") {
-    filter.category = category;
+  // Category Filter
+  if (category) {
+    query.category = { $regex: category, $options: "i" };
   }
 
-  if (tags && typeof tags === "string") {
-    const tagArray = tags.split(",").map(t => t.trim()).filter(t => t);
-    if (tagArray.length > 0) {
-      filter.tags = { $in: tagArray };
-    }
+  // Tags Filter
+  if (tags) {
+    const tagArray = tags.split(",").map((t) => t.trim());
+    query.tags = { $in: tagArray.map((t) => new RegExp(t, "i")) };
   }
 
-  let sortObj = {};
-  if (sort === "price_asc") sortObj.price = 1;
-  if (sort === "price_desc") sortObj.price = -1;
+  // Sorting
+  let sortOptions = {};
+  if (sort === "price_asc") sortOptions.price = 1;
+  else if (sort === "price_desc") sortOptions.price = -1;
+  else sortOptions.createdAt = -1;
 
-  const skip = (pageNum - 1) * limitNum;
-
-  const [courses, total] = await Promise.all([
-    Course.find(filter)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limitNum),
-    Course.countDocuments(filter),
-  ]);
+  const total = await Course.countDocuments(query);
+  const courses = await Course.find(query)
+    .sort(sortOptions)
+    .skip((page - 1) * limit)
+    .limit(limit);
 
   return {
     courses,
     total,
-    page: pageNum,
-    totalPages: Math.ceil(total / limitNum),
+    page,
+    totalPages: Math.ceil(total / limit) || 1,
   };
 };
 
 const getCourseById = async (id) => {
-  const course = await Course.findById(id);
-  if (!course) throw new Error("Course not found");
-  return course;
+  return await Course.findById(id);
 };
 
 module.exports = { getCourses, getCourseById };

@@ -5,18 +5,15 @@ const enrollCourse = async (studentId, courseId, batchId = null) => {
   const course = await Course.findById(courseId);
   if (!course) throw new Error("Course not found");
 
-  // Check if already enrolled
   const existingEnrollment = await Enrollment.findOne({
     student: studentId,
     course: courseId,
   });
 
-  // Fixed inverted logic bug
   if (existingEnrollment) {
     throw new Error("Already enrolled in this course");
   }
 
-  // Create new enrollment
   const enrollment = await Enrollment.create({
     student: studentId,
     course: courseId,
@@ -33,9 +30,16 @@ const getMyEnrollments = async (studentId) => {
     .sort({ createdAt: -1 });
 };
 
-const completeLesson = async (enrollId, lessonId) => {
-  const enrollment = await Enrollment.findById(enrollId);
-  if (!enrollment) throw new Error("Enrollment not found");
+// Fixed req/res runtime crash
+const completeLesson = async (enrollId, studentId, lessonId) => {
+  const enrollment = await Enrollment.findOne({
+    _id: enrollId,
+    student: studentId,
+  });
+
+  if (!enrollment) {
+    throw new Error("Unauthorized or Enrollment not found");
+  }
 
   const alreadyDone = enrollment.progress.completedLessons
     .map(String)
@@ -46,16 +50,17 @@ const completeLesson = async (enrollId, lessonId) => {
   }
 
   const course = await Course.findById(enrollment.course);
-  const totalLessons = course.syllabus.reduce(
-    (sum, mod) => sum + mod.lessons.length,
+  if (!course) throw new Error("Course not found");
+
+  const totalLessons = course.syllabus ? course.syllabus.reduce(
+    (sum, mod) => sum + (mod.lessons ? mod.lessons.length : 0),
     0
-  );
+  ) : 0;
 
   const completed = enrollment.progress.completedLessons.length;
   enrollment.progress.percent =
     totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
 
-  // Fixed Code-9 bug: added await on save
   await enrollment.save();
   return enrollment;
 };
